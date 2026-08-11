@@ -1,5 +1,5 @@
 /*
- * EMU650216 - 6502 & Custom Architecture VM
+ * EMU6502 - 6502 & Custom Architecture VM
  * Copyright (C) 2026 HassickDir??
  *
  * This program is free software: you can redistribute it and/or modify
