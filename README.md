@@ -1,51 +1,51 @@
-# EMU6502 - 6502 & Özel Mimari Sanal Makinesi (VM) Dokümantasyonu
+# EMU6502 - 6502 & Custom Architecture Virtual Machine (VM) Documentation
 
-## Genel Bakış
-**EMU650216**, standart MOS Technology 6502 komut seti mimarisini (ISA) tam olarak replike eden ve bunun üzerine özel 16-bit/20-bit mimari eklentileri sunan kapsamlı bir Sanal Makine (VM) emülatör projesidir. Sistem; bellek yönetimi, CPU komut döngüleri, Kesme (Interrupt) yönetimi ve BCD (Binary Coded Decimal) destekli Aritmetik Mantık Birimi'ni (ALU) modüler bir C++ altyapısıyla birleştirir. `raylib` kütüphanesi entegrasyonu sayesinde grafiksel donanım çıktısı alınmasına olanak tanır.
+## Overview
+**EMU650216** is a comprehensive Virtual Machine (VM) emulator project that accurately replicates the standard MOS Technology 6502 Instruction Set Architecture (ISA) while introducing custom 16-bit/20-bit architectural extensions. The system integrates memory management, CPU instruction cycles, Interrupt handling, and an Arithmetic Logic Unit (ALU) with Binary Coded Decimal (BCD) support within a modular C++ infrastructure. Through the integration of the `raylib` library, it allows for graphical hardware output.
 
-## Sistem Mimarisi
+## System Architecture
 
-### Yazmaçlar (Registers)
-Standart 6502'nin 8-bitlik yazmaç yapısı, özel mimari için genişletilmiştir:
-- **16-bit Yazmaçlar (RegSet0):** `AX`, `BX`, `CX`, `DX`, `XX`, `YY`
-  - Özel `LOW`, `HIGH`, `FULL` parametreleri ile bu yazmaçların alt ve üst 8-bitlik kısımlarına veya tamamına erişim sağlanır (Örn: `AX`'in alt 8 biti `A` registerı gibi davranır).
-- **20-bit Yazmaçlar (RegSet1):** `BP` (Base Pointer), `SP` (Stack Pointer), `PC` (Program Counter)
-  - Program sayacı ve yığın işaretçisi 20-bit adresleme alanı ile daha geniş bellek yönetimini destekler.
+### Registers
+The standard 8-bit register structure of the 6502 has been extended for the custom architecture:
+- **16-bit Registers (RegSet0):** `AX`, `BX`, `CX`, `DX`, `XX`, `YY`
+  - Access to the lower and upper 8-bit halves, or the full 16-bit value of these registers, is provided via custom `LOW`, `HIGH`, and `FULL` parameters (e.g., the lower 8 bits of `AX` behave like the standard `A` register).
+- **20-bit Registers (RegSet1):** `BP` (Base Pointer), `SP` (Stack Pointer), `PC` (Program Counter)
+  - The program counter and stack pointer support extended memory management with a 20-bit addressing space.
 
-### Durum Bayrakları (Flags)
-İşlemci durumunu kontrol eden 8 adet bayrak bulunur:
-- **C (CF):** Carry (Elde)
-- **Z (ZF):** Zero (Sıfır)
-- **I (IF):** Interrupt Disable (Kesme Engelleme)
-- **D (DF):** Decimal Mode (BCD formatında matematik işlemleri için)
-- **B (BF):** Break (Yazılımsal kesme)
+### Status Flags
+There are 8 flags that indicate the processor status:
+- **C (CF):** Carry
+- **Z (ZF):** Zero
+- **I (IF):** Interrupt Disable
+- **D (DF):** Decimal Mode (for mathematical operations in BCD format)
+- **B (BF):** Break (Software interrupt)
 - **S (SF):** Stack
-- **V (VF):** Overflow (Taşma)
-- **N (NF):** Negative (Negatif)
+- **V (VF):** Overflow
+- **N (NF):** Negative
 
-## Modül Detayları
+## Module Details
 
-### 1. Bellek Yönetimi (`memory.hpp` & `memory.cpp`)
-- **Boyut:** Varsayılan bellek boyutu `65536` byte (64 KB) olarak ayarlanmıştır (`MEMORY_SIZE`), ancak 20-bitlik adres yolu potansiyeliyle genişletilebilir.
-- **Yığın (Stack) Operasyonları:** 
-  - `Push8Stack` / `Pull8Stack`: 8-bit veri itme/çekme.
-  - `Push16Stack` / `Pull16Stack`: 16-bit (word) veri itme/çekme işlemleri.
-- **Adresleme Fonksiyonları:** Bellek üzerinden 8-bit (`ReadByte`/`WriteByte`), 16-bit (`ReadWord`/`WriteWord`) ve genişletilmiş 20-bit (`Read20bit`) bellek okuma desteklenir. Endianness (Byte sıralaması) LSB-first mantığıyla çalışır.
+### 1. Memory Management (`memory.hpp` & `memory.cpp`)
+- **Size:** The default memory size is configured to `65536` bytes (64 KB) (`MEMORY_SIZE`), but it is extensible given the potential of the 20-bit address bus.
+- **Stack Operations:** 
+  - `Push8Stack` / `Pull8Stack`: 8-bit data push/pull operations.
+  - `Push16Stack` / `Pull16Stack`: 16-bit (word) data push/pull operations.
+- **Addressing Functions:** Supports 8-bit (`ReadByte`/`WriteByte`), 16-bit (`ReadWord`/`WriteWord`), and extended 20-bit (`Read20bit`) memory reads. The system operates using a Little-Endian (LSB-first) byte order.
 
-### 2. Aritmetik ve Mantık Birimi (`alu.hpp`)
-Tüm matematiksel ve mantıksal işlemler ALU sınıfı içerisinde izole edilmiştir.
-- **Desteklenen Operasyonlar:** `Add` (ADC), `Sub` (SBC), `And`, `Or`, `Xor`, `Asl`, `Lsr`, `Rol`, `Ror`, `Cmp`, `Bit`, `Inc`, `Dec`.
-- **Decimal Mod (BCD) Desteği:** `DF` (Decimal Flag) aktif edildiğinde `Add` ve `Sub` fonksiyonları standart ikilik (binary) işlemler yerine 10'luk taban düzeltmeleri uygular. Taşıma (Carry) ve yarı elde mantığı donanıma birebir sadık kalınarak hesaplanır.
+### 2. Arithmetic and Logic Unit (`alu.hpp`)
+All mathematical and logical operations are isolated within the ALU class.
+- **Supported Operations:** `Add` (ADC), `Sub` (SBC), `And`, `Or`, `Xor`, `Asl`, `Lsr`, `Rol`, `Ror`, `Cmp`, `Bit`, `Inc`, `Dec`.
+- **Decimal Mode (BCD) Support:** When the `DF` (Decimal Flag) is active, `Add` and `Sub` functions apply base-10 corrections instead of standard binary operations. Carry and half-carry logic is calculated in strict fidelity to the original hardware.
 
-### 3. İşlemci Çekirdeği (`cpu.hpp` & `cpu.cpp`)
-6502 opcode'larının (komutlarının) çözümlendiği ve çalıştırıldığı ana döngü modülüdür.
-- **Komut Döngüsü:** `Run()` fonksiyonu üzerinden PC (Program Counter) 1 byte ilerletilerek opcode alınır ve `ExecuteOpcode` fonksiyonunda işlenir.
-- **Adresleme Modları (Addressing Modes):**
-  - *Immediate, ZeroPage, ZeroPage,X, ZeroPage,Y, Absolute, Absolute,X, Absolute,Y, Indirect, Indirect,X, Indirect,Y, Relative* gibi standart 6502 modlarının hepsi gerçeklenmiştir.
-- **Dallanma (Branching):** Bayrak durumlarına dayalı göreceli atlamalar (`BCC`, `BCS`, `BEQ`, `BMI`, `BNE`, `BPL`, vb.).
-- **Donanım Kesmeleri (IRQs) ve Yazılım Kesmeleri:** `IrqExec` tetiklendiğinde veya `BRK` komutu okunduğunda sistem PC ve Flag durumunu güvenli şekilde Stack'e (yığına) atarak Kesme Yönlendirme (Interrupt Vector) adresine sıçrar (`0xFFFE`). 
+### 3. Processor Core (`cpu.hpp` & `cpu.cpp`)
+This is the main loop module where 6502 opcodes are decoded and executed.
+- **Instruction Cycle:** Through the `Run()` function, the PC (Program Counter) is incremented by 1 byte to fetch the opcode, which is then processed in the `ExecuteOpcode` function.
+- **Addressing Modes:**
+  - All standard 6502 modes are implemented, including *Immediate, ZeroPage, ZeroPage,X, ZeroPage,Y, Absolute, Absolute,X, Absolute,Y, Indirect, Indirect,X, Indirect,Y, and Relative*.
+- **Branching:** Relative jumps based on flag states (`BCC`, `BCS`, `BEQ`, `BMI`, `BNE`, `BPL`, etc.).
+- **Hardware Interrupts (IRQs) and Software Interrupts:** When `IrqExec` is triggered or a `BRK` instruction is fetched, the system safely pushes the PC and Flag states to the Stack and jumps to the Interrupt Vector address (`0xFFFE`). 
 
-### 4. VM Parametreleri (`vmp.hpp`)
-Sistemin genel konfigürasyonunu tutan kısımdır.
-- `VM_DEBUG`: Makinenin konsol üzerinden anlık PC, Opcode ve yazmaç dökümü yapmasını (debugger modunu) açıp kapatır.
-- `<raylib.h>` dahil edilmiştir, bu sayede sistem ileride VRAM bellek bölgesini doğrudan grafik ekrana yansıtacak şekilde genişletilebilir.
+### 4. VM Parameters (`vmp.hpp`)
+This section holds the general configuration of the system.
+- `VM_DEBUG`: Toggles the debugger mode, allowing the machine to dump instantaneous PC, Opcode, and register states via the console.
+- `<raylib.h>` is included, allowing the system to be expanded in the future to directly render the VRAM memory region to a graphical display.
